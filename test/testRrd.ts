@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 process.env.NODE_ENV = 'testing';
 import {expect} from 'chai';
 import * as chai from 'chai';
@@ -22,30 +23,34 @@ function waitNext(ms: number) {
 }
 
 describe('rrd', () => {
-	describe('jwtVerifyPromise', () => {
-		it('should fail internal jwtVerifyPromise with broken data', async () => {
-            // [{name: 'test', count: 10, step: 100}]
-			const rrd = new Rrd({graph: [
-                {name: 'test', count: 10, step: 100},
-                {name: 'test2', count: 20, step: 100},
-            ]});
-			await waitNext(100);
-			// run data
-			rrd.set(1);
-			await sleep(1);
-			rrd.set(2);
-			await sleep(1);
-			rrd.set(2);
-			// sleep
-			await sleep(100);
-			// flush buffer
-			rrd.flush();
-			const data = rrd.getData('test');
-			expect(data.length).to.be.equal(10);
-			expect(data.filter((e) => (e !== undefined ? true : false)).length).to.be.equal(1);
-			const data2 = rrd.getData('test2');
-			expect(data2.length).to.be.equal(20);
-			expect(data2.filter((e) => (e !== undefined ? true : false)).length).to.be.equal(1);
+	it('run run two graphs', async () => {
+		await waitNext(100);
+		const rrd = new Rrd({
+			graph: [
+				{name: 'test', count: 10, step: 100},
+				{name: 'test2', count: 20, step: 100},
+			],
 		});
+		// run data
+		rrd.set(1);
+		await sleep(1);
+		rrd.set(2);
+		await sleep(1);
+		rrd.set(3);
+		await sleep(1);
+		rrd.set(undefined);
+		// sleep
+		await sleep(200);
+		rrd.flush();
+		rrd.set(2);
+		await sleep(100);
+		// flush buffer
+		rrd.flush();
+		const data = rrd.getData('test');
+		expect(data.length).to.be.equal(10);
+		expect(data.filter((e) => e !== undefined).length).to.be.equal(2);
+		const data2 = rrd.getData('test2');
+		expect(data2.length).to.be.equal(20);
+		expect(data2.filter((e) => e !== undefined).length).to.be.equal(2);
 	});
 });

@@ -1,4 +1,4 @@
-import * as EventEmitter from 'eventemitter3';
+import {EventEmitter} from 'typed-event-emitter';
 
 interface IGraphSettings {
 	name: string;
@@ -7,6 +7,7 @@ interface IGraphSettings {
 }
 
 interface IProps {
+	startTime?: Date;
 	graph: IGraphSettings[];
 }
 
@@ -28,47 +29,57 @@ interface IDataSet {
 type IDataObject = Record<string, IDataSet>;
 
 interface IBufferData {
-	value: number;
+	value: number | undefined;
 	ts: Date;
 }
 
 export class Rrd extends EventEmitter {
+	public onGraphUpdate = this.registerEvent<(name: string, data: IData) => void>();
 	private data: IDataObject = {};
-	private buffer: Record<string, IBufferData[]> = {};
+	private buffers: Record<string, IBufferData[]> = {};
+	private startTime: Date;
 	constructor(props: IProps) {
 		super();
+		this.startTime = props.startTime || new Date();
 		props.graph.forEach((e) => {
 			this.data[e.name] = {
 				count: e.count,
 				step: e.step,
-				data: Array.apply(null, {length: e.count}).map(function () {
-					return undefined;
-				}),
+				data: Array(e.count).fill(undefined),
 			};
-			this.buffer[e.name] = [];
+			this.buffers[e.name] = [];
 		});
 	}
-	public set(value: number) {
-		const ts = new Date();
-		this.checkBufferSwap(ts);
-		Object.keys(this.buffer).forEach((k) => {
-			this.buffer[k].push({value, ts});
+
+	public set(value: number | undefined): void {
+		const ts = this.flush();
+		Object.keys(this.buffers).forEach((k) => {
+			this.buffers[k].push({value, ts});
 		});
 	}
+
 	public getData(name: string): DataPoint[] {
 		const value = this.data[name];
 		return [...value.data];
 	}
-	public flush() {
+
+	public flush(): Date {
 		const ts = new Date();
 		this.checkBufferSwap(ts);
+		return ts;
 	}
+
 	private getNextPointDate(ts: Date, step: number) {
 		return new Date(Math.ceil(ts.getTime() / step) * step);
 	}
+
+	/* 	private getCurrentPointDate(ts: Date, step: number) {
+		return new Date(Math.floor(ts.getTime() / step) * step);
+	} */
+
 	private checkBufferSwap(ts: Date) {
-		Object.keys(this.buffer).forEach((k) => {
-			const buffer = this.buffer[k];
+		Object.keys(this.buffers).forEach((k) => {
+			const buffer = this.buffers[k];
 			if (buffer.length > 0) {
 				const c = this.data[k];
 				const last = this.getNextPointDate(buffer[buffer.length - 1].ts, c.step);
@@ -78,13 +89,10 @@ export class Rrd extends EventEmitter {
 			}
 		});
 	}
-	private purgeBuffer(name:string, ts: Date) {
-		const values = this.buffer[name].map((e) => e.value);
-		this.buffer[name] = [];
 
-		const data = [...this.data[name].data];
-		data.shift();
-		data.push({
+	private purgeBuffer(name: string, ts: Date) {
+		const values = this.buffers[name].filter((e) => e.value !== undefined).map((e) => e.value) as number[];
+		const pointData = {
 			ts,
 			avg:
 				values.reduce((previousValue, currentValue) => {
@@ -92,7 +100,21 @@ export class Rrd extends EventEmitter {
 				}, 0) / values.length,
 			min: Math.min(...values),
 			max: Math.max(...values),
-		});
+		};
+		this.buffers[name] = [];
+		const data = [...this.data[name].data];
+		// handle data slot location
+		// TODO: fix ordering and time elapse
+		const loc = data.length - 1 - this.dataLocation(ts, this.data[name].step);
+		console.log(loc);
+		data[loc] = pointData;
+		this.emit(this.onGraphUpdate, name, pointData);
 		this.data[name].data = data;
+	}
+
+	private dataLocation(ts: Date, step: number): number {
+		const currentTs = this.getNextPointDate(ts, step);
+		const startTs = this.getNextPointDate(this.startTime, step);
+		return Math.round((currentTs.getTime() - startTs.getTime()) / step);
 	}
 }

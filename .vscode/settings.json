@@ -1,0 +1,7 @@
+{
+	"mochaExplorer.env": {
+		"TS_NODE_PROJECT": "tsconfig.test.json"
+	},
+	"mochaExplorer.files": "test/**/*.ts",
+	"mochaExplorer.require": "ts-node/register"
+}
