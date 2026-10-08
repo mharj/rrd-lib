@@ -1,12 +1,5 @@
-/* eslint-disable import/first */
-process.env.NODE_ENV = 'testing';
-import {expect} from 'chai';
-import * as chai from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
-import 'mocha';
+import {describe, expect, it} from 'vitest';
 import {Rrd} from '../src/';
-// tslint:disable: no-unused-expression
-chai.use(chaiAsPromised);
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));

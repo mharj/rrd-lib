@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "preserve",
+    "target": "es2020",
+    "lib": ["es2020", "dom"],
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "moduleResolution": "bundler",
+    "sourceRoot": "./src",
+    "types": ["node"],
+    "declaration": true,
+    "removeComments": false,
+    "inlineSources": false,
+    "inlineSourceMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "importHelpers": false,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "strict": true
+  },
+  "include": ["src"],
+  "exclude": ["test", "dist", "node_modules"]
+}

@@ -1,4 +1,4 @@
-import {EventEmitter} from 'typed-event-emitter';
+import {EventEmitter} from 'events';
 
 interface IGraphSettings {
 	name: string;
@@ -32,13 +32,13 @@ interface IBufferData {
 	value: number | undefined;
 	ts: Date;
 }
-
-export class Rrd extends EventEmitter {
-	public onGraphUpdate = this.registerEvent<(name: string, data: IData) => void>();
+export class Rrd extends EventEmitter<{
+	graphUpdate: [name: string, data: IData];
+}> {
 	private data: IDataObject = {};
 	private buffers: Record<string, IBufferData[]> = {};
 	private startTime: Date;
-	constructor(props: IProps) {
+	public constructor(props: IProps) {
 		super();
 		this.startTime = props.startTime || new Date();
 		props.graph.forEach((e) => {
@@ -108,7 +108,7 @@ export class Rrd extends EventEmitter {
 		const loc = data.length - 1 - this.dataLocation(ts, this.data[name].step);
 		console.log(loc);
 		data[loc] = pointData;
-		this.emit(this.onGraphUpdate, name, pointData);
+		this.emit('graphUpdate', name, pointData);
 		this.data[name].data = data;
 	}
 
